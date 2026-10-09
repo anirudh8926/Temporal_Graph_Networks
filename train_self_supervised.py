@@ -62,6 +62,9 @@ parser.add_argument('--use_source_embedding_in_message', action='store_true',
                     help='Whether to use the embedding of the source node as part of the message')
 parser.add_argument('--dyrep', action='store_true',
                     help='Whether to run the dyrep model')
+#added arguements for the time decay aggregator
+parser.add_argument('--decay', type=float, default=0.1,
+                    help='Decay rate for time-decay aggregator')
 
 
 try:
@@ -153,6 +156,7 @@ for i in range(args.n_runs):
             embedding_module_type=args.embedding_module,
             message_function=args.message_function,
             aggregator_type=args.aggregator,
+            aggregator_decay=args.decay,
             memory_updater_type=args.memory_updater,
             n_neighbors=NUM_NEIGHBORS,
             mean_time_shift_src=mean_time_shift_src, std_time_shift_src=std_time_shift_src,

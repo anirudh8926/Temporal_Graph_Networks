@@ -1,5 +1,6 @@
 from collections import defaultdict
 import torch
+import torch.nn as nn
 import numpy as np
 
 
@@ -81,10 +82,63 @@ class MeanMessageAggregator(MessageAggregator):
     return to_update_node_ids, unique_messages, unique_timestamps
 
 
-def get_message_aggregator(aggregator_type, device):
+def get_message_aggregator(aggregator_type, device, decay=0.1):
   if aggregator_type == "last":
     return LastMessageAggregator(device=device)
   elif aggregator_type == "mean":
     return MeanMessageAggregator(device=device)
+  elif aggregator_type == "time_decay":
+    return TimeDecayMessageAggregator(device=device, decay=decay)
   else:
     raise ValueError("Message aggregator {} not implemented".format(aggregator_type))
+
+class TimeDecayMessageAggregator(MessageAggregator):
+  def __init__(self, device, decay=0.1):
+    super(TimeDecayMessageAggregator, self).__init__(device)
+    self.decay = decay
+
+  def aggregate(self, node_ids, messages):
+    """Weighted aggregation favoring recent messages"""
+    
+    unique_node_ids = np.unique(node_ids)
+    unique_messages = []
+    unique_timestamps = []
+
+    to_update_node_ids = []
+
+    for node_id in unique_node_ids:
+      if len(messages[node_id]) > 0:
+        to_update_node_ids.append(node_id)
+
+        # Extract messages and timestamps
+        msg_list = [m[0] for m in messages[node_id]]
+        time_list = [m[1] for m in messages[node_id]]
+
+        msg_tensor = torch.stack(msg_list)  # [num_msgs, dim]
+        time_tensor = torch.stack(time_list)  # [num_msgs]
+
+        # Use most recent timestamp as reference
+        t_now = time_tensor[-1]
+
+        # Compute time differences
+        delta_t = t_now - time_tensor
+
+        # Compute exponential decay weights
+        weights = torch.exp(-self.decay * delta_t)
+
+        # Normalize weights
+        weights = weights / weights.sum()
+
+        # Apply weights
+        weighted_msgs = msg_tensor * weights.unsqueeze(-1)
+
+        # Aggregate
+        aggregated_message = torch.sum(weighted_msgs, dim=0)
+
+        unique_messages.append(aggregated_message)
+        unique_timestamps.append(t_now)
+
+    unique_messages = torch.stack(unique_messages) if len(to_update_node_ids) > 0 else []
+    unique_timestamps = torch.stack(unique_timestamps) if len(to_update_node_ids) > 0 else []
+
+    return to_update_node_ids, unique_messages, unique_timestamps

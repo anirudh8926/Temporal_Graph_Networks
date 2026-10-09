@@ -20,6 +20,7 @@ class TGN(torch.nn.Module):
                message_function="mlp",
                mean_time_shift_src=0, std_time_shift_src=1, mean_time_shift_dst=0,
                std_time_shift_dst=1, n_neighbors=None, aggregator_type="last",
+               aggregator_decay=0.1,
                memory_updater_type="gru",
                use_destination_embedding_in_message=False,
                use_source_embedding_in_message=False,
@@ -52,7 +53,9 @@ class TGN(torch.nn.Module):
     self.std_time_shift_src = std_time_shift_src
     self.mean_time_shift_dst = mean_time_shift_dst
     self.std_time_shift_dst = std_time_shift_dst
-
+    #adding aggregator decay parameter
+    self.aggregator_decay = aggregator_decay
+    
     if self.use_memory:
       self.memory_dimension = memory_dimension
       self.memory_update_at_start = memory_update_at_start
@@ -64,8 +67,9 @@ class TGN(torch.nn.Module):
                            input_dimension=message_dimension,
                            message_dimension=message_dimension,
                            device=device)
-      self.message_aggregator = get_message_aggregator(aggregator_type=aggregator_type,
-                                                       device=device)
+      self.message_aggregator = get_message_aggregator(
+    aggregator_type, device, decay=self.aggregator_decay)
+      
       self.message_function = get_message_function(module_type=message_function,
                                                    raw_message_dimension=raw_message_dimension,
                                                    message_dimension=message_dimension)

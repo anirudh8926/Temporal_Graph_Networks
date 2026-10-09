@@ -23,3 +23,17 @@ class TimeEncode(torch.nn.Module):
     output = torch.cos(self.w(t))
 
     return output
+
+class Time2Vec(TimeEncode):
+  def __init__(self, dimension):
+    super().__init__(dimension)
+  def forward(self, t):
+    t = t.unsqueeze(dim = -1)
+    out = self.w(t)
+    linear = out[...,:1]
+    periodic = torch.cos(out[...,1:])
+    return torch.cat([linear, periodic], dim = -1)
+    
+    
+
+  
