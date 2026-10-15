@@ -6,7 +6,8 @@ There's mainly 2 aggregators that have been described in this paper:
 
 1. Last
 2. Mean
-   with the former only including the latest update to the node state and mean being the mean of all of the node states.
+
+with the former only including the latest update to the node state and mean being the mean of all of the node states.
 
 The extension here, is made with a temporally sensitive time decay aggregator, that produces a weighted mean of the states, according to the temporal distance from the current time of each state.
 mathematically(very roughly):
